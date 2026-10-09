@@ -31,10 +31,16 @@ install the top 3 together: [State of public skills](docs/state-of-skills.md).
 
 ## Install
 
-Python 3.10+, no dependencies (PyYAML is used if it's there). Not on PyPI yet, so from a clone:
+Python 3.10+, no dependencies (PyYAML is used if it's there). Not on PyPI yet, so straight from GitHub:
 
 ```sh
-git clone <this repo> && cd skill-trigger-bench
+pipx install git+https://github.com/TanbirRamim/skill-trigger-bench   # or: uv tool install git+https://...
+```
+
+Or from a clone:
+
+```sh
+git clone https://github.com/TanbirRamim/skill-trigger-bench && cd skill-trigger-bench
 pipx install .        # or: uv tool install .
 stb --version
 ```
