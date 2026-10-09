@@ -68,8 +68,13 @@ def find_skills(root: Path, source: str = "dir") -> list[Skill]:
         return [load_skill(root / "SKILL.md", source)]
     if not root.is_dir():
         return []
-    found = []
+    found, visited = [], set()
     for dirpath, dirnames, filenames in os.walk(root, followlinks=True):
+        real = os.path.realpath(dirpath)
+        if real in visited:  # symlink loop or a second link to the same folder
+            dirnames[:] = []
+            continue
+        visited.add(real)
         dirnames[:] = sorted(d for d in dirnames if not d.startswith(".") and d != "node_modules")
         if "SKILL.md" in filenames:
             found.append(load_skill(Path(dirpath) / "SKILL.md", source))

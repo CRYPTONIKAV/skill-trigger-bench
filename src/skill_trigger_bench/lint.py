@@ -22,7 +22,7 @@ BODY_MAX_LINES = 500
 DEFAULT_OVERLAP = 0.35
 
 WHEN_CUES = re.compile(
-    r"\b(use (it |this |this skill )?(when|whenever|for|if|to|on|before|after)|when(ever)?\b|"
+    r"\b(use (it |this |this skill )?(when|whenever|for|if|to|on|before|after|during|while)|when(ever)?\b|"
     r"if (the )?(user|you)|trigger(s|ed)?|invoke|load (it )?(when|before|for)|applies to|"
     r"for any request|asks? (for|to|about)|mentions?)\b",
     re.I,
@@ -127,6 +127,7 @@ def _check_frontmatter(s: Skill) -> list[Finding]:
 
 
 LINK_RE = re.compile(r"\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
+INLINE_CODE_RE = re.compile(r"`[^`]*`")
 PATH_RE = re.compile(r"(?<![\w/.-])((?:references|scripts|assets|reference|templates|examples)/[\w./-]+\.\w+)")
 
 
@@ -135,12 +136,15 @@ def referenced_files(body: str) -> list[tuple[str, bool]]:
     refs = []
     in_fence = False
     for line in body.splitlines():
-        if line.lstrip().startswith("```"):
+        if line.lstrip().startswith(("```", "~~~")):
             in_fence = not in_fence
-        for m in LINK_RE.finditer(line):
+            continue
+        if in_fence:
+            continue  # code samples, not links
+        prose = INLINE_CODE_RE.sub("", line)
+        for m in LINK_RE.finditer(prose):
             refs.append((m.group(1), True))
-        if not in_fence:
-            refs += [(r, False) for r in PATH_RE.findall(line)]
+        refs += [(r, False) for r in PATH_RE.findall(line)]
     out, seen = [], set()
     for r, is_link in refs:
         r = r.split("#", 1)[0].strip("`'\"")
@@ -148,6 +152,8 @@ def referenced_files(body: str) -> list[tuple[str, bool]]:
             continue
         if "{" in r or "*" in r or "<" in r:
             continue
+        if is_link and ("." not in r and "/" not in r or re.search(r"[\s'\",=]", r)):
+            continue  # placeholders like [Title](URL) or (path), or code that looks like a link
         if r not in seen:
             seen.add(r)
             out.append((r, is_link))
@@ -211,12 +217,14 @@ def lint(
     for name, group in by_name.items():
         if len(group) > 1:
             where = ", ".join(sorted({g.source for g in group}))
+            same = len({g.path.read_bytes() if g.path.is_file() else g.path for g in group}) == 1
+            what = "identical copies of this skill" if same else "skills share this name"
             findings.append(
                 Finding(
                     "duplicate-name",
                     "error",
                     name,
-                    f"{len(group)} skills share this name ({where})",
+                    f"{len(group)} {what} ({where})",
                     str(group[0].path),
                 )
             )

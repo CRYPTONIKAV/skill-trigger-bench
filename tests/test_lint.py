@@ -115,6 +115,39 @@ class LintTests(SkillDirCase):
         refs = referenced_files("[x](https://e.com/a.md) [y](#anchor)\n```\nscripts/in_fence.py\n```\n[z](/abs.md)\n")
         self.assertEqual(refs, [])
 
+    def test_links_in_code_and_placeholders_ignored(self):
+        body = (
+            "> Also see: [Title](URL) and [notes](path).\n"
+            "Use `[x](missing.md)` in your own skill.\n"
+            "```python\n"
+            "subprocess.Popen(['id'],shell=True,stdout=-1)\n"
+            "[a](in_fence.md)\n"
+            "```\n"
+            "[real](references/real.md)\n"
+        )
+        self.assertEqual(referenced_files(body), [("references/real.md", True)])
+
+    def test_description_use_during(self):
+        self.make_skill("x", "x", "EU AI Act readiness check. Use during AI-system intake or before EU deployment.")
+        self.assertNotIn("description-no-when", rules(self.run_lint()[0]))
+
+    def test_duplicate_identical_copies_named(self):
+        self.make_skill("one/pdf", "pdf", GOOD)
+        self.make_skill("two/pdf", "pdf", GOOD)
+        self.make_skill("three/doc", "doc", GOOD)
+        self.make_skill("four/doc", "doc", GOOD, body="different\n")
+        msgs = {f.skill: f.message for f in self.run_lint()[0] if f.rule == "duplicate-name"}
+        self.assertIn("identical copies", msgs["pdf"])
+        self.assertIn("share this name", msgs["doc"])
+
+    def test_symlink_loop_does_not_hang(self):
+        import os
+
+        self.make_skill("pack/a", "a", GOOD)
+        os.symlink("..", self.root / "pack" / "loop")
+        os.symlink(self.root / "pack", self.root / "pack-again")
+        self.assertEqual([s.name for s in find_skills(self.root)], ["a"])
+
     def test_template_paths_ignored(self):
         self.assertEqual(referenced_files("[x](references/{name}.md) [y](references/*.md)"), [])
 
