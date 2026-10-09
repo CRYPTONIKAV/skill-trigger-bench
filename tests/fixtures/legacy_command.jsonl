@@ -1,0 +1,2 @@
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Skill","input":{"command":"/csv-summary data.csv"}}]}}
+{"type":"result","subtype":"success","is_error":false,"result":"ok"}

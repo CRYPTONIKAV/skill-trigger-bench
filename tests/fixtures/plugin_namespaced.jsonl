@@ -1,0 +1,4 @@
+{"type":"system","subtype":"init","skills":["resend:resend","resend:resend-cli"]}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"I'll use the Resend skill."},{"type":"tool_use","id":"t1","name":"Skill","input":{"skill":"resend:resend-cli"}}]}}
+{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t1","content":"(redacted)"}]}}
+{"type":"result","subtype":"success","is_error":false,"result":"done","total_cost_usd":0.01}

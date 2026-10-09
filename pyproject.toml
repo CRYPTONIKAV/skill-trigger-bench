@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "skill-trigger-bench"
+version = "0.1.0"
+description = "Check whether your Agent Skills (SKILL.md) actually trigger: lint the installed set, measure activation rates."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+dependencies = []
+keywords = ["agent-skills", "claude-code", "skills", "eval", "lint"]
+classifiers = ["Programming Language :: Python :: 3", "License :: OSI Approved :: MIT License"]
+
+[project.optional-dependencies]
+yaml = ["pyyaml>=6"]
+
+[project.scripts]
+stb = "skill_trigger_bench.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]

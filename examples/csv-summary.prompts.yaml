@@ -1,0 +1,7 @@
+# Prompts for `stb eval examples/skills/csv-summary --prompts examples/csv-summary.prompts.yaml`
+should_trigger:
+  - "What's in sales_2024.csv? Give me a quick overview of the columns."
+  - "Can you profile this spreadsheet export for me: data/customers.csv"
+should_not_trigger:
+  - "Write a haiku about autumn rain."
+  - "Convert this JSON object to YAML: {\"a\": 1, \"b\": [2, 3]}"

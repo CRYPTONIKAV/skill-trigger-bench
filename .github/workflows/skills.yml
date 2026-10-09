@@ -1,0 +1,42 @@
+# Sample workflow: lint skills on every PR, and optionally measure activation by hand.
+name: skills
+
+on:
+  pull_request:
+    paths: ["skills/**", ".claude/skills/**"]
+  workflow_dispatch:
+    inputs:
+      skill:
+        description: "Skill folder to eval (calls the model)"
+        required: false
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install .  # in your own repo: pip install skill-trigger-bench
+      - name: Lint skills
+        run: stb lint skills examples/skills
+
+  eval:
+    if: github.event_name == 'workflow_dispatch' && inputs.skill != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install . && npm install -g @anthropic-ai/claude-code
+      - name: Measure activation
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: stb eval "${{ inputs.skill }}" --model haiku --max-prompts 10 --format json > eval.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval
+          path: eval.json

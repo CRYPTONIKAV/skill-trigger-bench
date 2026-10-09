@@ -1,0 +1,6 @@
+Warning: no stdin data received in 3s, proceeding without it.
+{"type":"system","subtype":"init","skills":[{"name":"csv-summary"}]}
+{"type":"assistant","message":{"role":"assistant","content":"plain string content"}}
+not json at all
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Read","input":{"file_path":".claude/skills/csv-summary/SKILL.md"}}]}}
+{"type":"result","subtype":"success","is_error":false,"result":"read it","cost_usd":0.002}
