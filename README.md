@@ -155,8 +155,31 @@ FAIL
 Four prompts is far too few to mean anything. It's there to show the shape. Model output
 varies between runs, so use 10+ prompts per side before you trust a number.
 
-Runners are pluggable (`src/skill_trigger_bench/runners.py`). Only Claude Code is
-implemented today; a Codex or Gemini CLI runner is a subclass with a `run()` method.
+### Runners
+
+Pick one with `--agent` (alias `--runner`). They live in `src/skill_trigger_bench/runners.py`;
+another agent is a subclass with a `run()` method.
+
+- **`claude`** (default): `claude -p --output-format stream-json`. Activation is the
+  explicit `Skill` tool call in the transcript.
+- **`codex`**: `codex exec --json --sandbox read-only --ephemeral --ignore-user-config`,
+  with `web_search="disabled"` and `approval_policy="never"`. Skills are copied into
+  `<sandbox>/.agents/skills` and `HOME` points at the sandbox so your own
+  `~/.agents/skills` don't leak in (`CODEX_HOME` stays real, for auth). Admin
+  (`/etc/codex/skills`) and Codex's bundled skills can't be hidden.
+
+  **Codex activation is a heuristic.** `codex exec --json` has no "skill used" event
+  (the item types are `agent_message`, `reasoning`, `command_execution`, `file_change`,
+  `mcp_tool_call`, `web_search`, `todo_list`, `error`, ...). Codex's docs say that when
+  it picks a skill it reads the full SKILL.md, so `stb` counts a skill as activated when a
+  `command_execution` item's command mentions `<skill>/SKILL.md`. That misses a skill used
+  from its description alone, and would count a model that reads a SKILL.md for another
+  reason.
+
+  Status: the flags were checked against `codex exec --help` (codex-cli 0.160.0) and the
+  event schema against the docs and `codex-rs/exec/src/exec_events.rs`. The parser tests use
+  hand-written fixtures in that shape. **It has not been run live against a model yet**;
+  if you do, a recorded transcript in an issue would help.
 
 ## CI
 
@@ -174,8 +197,8 @@ time, start there. `stb` is aimed at the gaps:
   one. `stb lint` looks at everything you have installed together, across
   `~/.claude/skills`, the project, and plugins.
 - **Not tied to one agent.** SKILL.md is a shared format, and the eval runner is a plugin
-  point so the same prompt files can be run against other agents. (Honest status: only
-  the Claude runner exists so far.)
+  point so the same prompt files can be run against other agents. Claude Code and Codex CLI
+  runners exist today; the Codex one detects activation heuristically (see Runners).
 - **CI-first.** Plain exit codes, JSON output, no interactive session needed.
 
 ## Use it from your agent

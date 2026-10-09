@@ -165,7 +165,7 @@ def build_parser() -> argparse.ArgumentParser:
     ep.add_argument(
         "--with", dest="with_skills", action="append", help="also install these skills in the sandbox (repeatable)"
     )
-    ep.add_argument("--runner", choices=sorted(RUNNERS), default="claude")
+    ep.add_argument("--agent", "--runner", dest="runner", choices=sorted(RUNNERS), default="claude")
     ep.add_argument("--model", help="model passed to the runner")
     ep.add_argument("-n", type=int, default=5, help="generated prompts per side (default %(default)s)")
     ep.add_argument("--min-trigger", type=float, default=0.8)

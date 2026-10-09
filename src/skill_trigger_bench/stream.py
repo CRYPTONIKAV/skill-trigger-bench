@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 
 
@@ -103,3 +104,78 @@ def parse_lines(lines) -> Transcript:
 
 def parse_text(text: str) -> Transcript:
     return parse_lines(text.splitlines())
+
+
+# --- Codex CLI -------------------------------------------------------------------------
+# `codex exec --json` event schema: openai/codex codex-rs/exec/src/exec_events.rs and
+# https://learn.chatgpt.com/docs/non-interactive-mode. Top-level types are thread.started,
+# turn.started, turn.completed, turn.failed, item.started, item.updated, item.completed and
+# error. Item types are agent_message, reasoning, command_execution, file_change,
+# mcp_tool_call, collab_tool_call, web_search, todo_list and error. There is no skill item,
+# so activation is inferred from a shell command that reads <skill>/SKILL.md (Codex docs:
+# "When Codex selects a skill, it still reads the full SKILL.md instructions").
+
+_SKILL_MD = re.compile(r"([^\s/\\'\"]+)[/\\]SKILL\.md\b")
+
+
+def codex_skill_reads(command: str) -> list[str]:
+    """Skill folder names whose SKILL.md this command touches (heuristic)."""
+    return _SKILL_MD.findall(command or "")
+
+
+def parse_codex_events(events, names: dict[str, str] | None = None) -> Transcript:
+    """`names` maps installed skill folder -> frontmatter name."""
+    names = names or {}
+    t = Transcript()
+    seen: set[str] = set()
+    for ev in events:
+        if not isinstance(ev, dict):
+            t.bad_lines += 1
+            continue
+        typ = ev.get("type")
+        if typ in ("item.started", "item.completed"):
+            item = ev.get("item")
+            if not isinstance(item, dict):
+                continue
+            itype = item.get("type")
+            iid = item.get("id")
+            if itype == "command_execution":
+                if typ == "item.started" or iid not in seen:
+                    t.tool_calls.append("command_execution")
+                for folder in codex_skill_reads(item.get("command", "")):
+                    skill = names.get(folder, folder)
+                    if (iid, skill) not in seen:
+                        t.skill_calls.append(skill)
+                        seen.add((iid, skill))
+                seen.add(iid)
+            elif itype == "agent_message" and typ == "item.completed":
+                t.result = item.get("text") if isinstance(item.get("text"), str) else t.result
+            elif itype == "error" and typ == "item.completed":
+                # non-fatal warnings are reported as error items; only turn.failed/error end a run
+                pass
+        elif typ == "turn.completed":
+            t.finished = True
+            t.subtype = "success"
+        elif typ in ("turn.failed", "error"):
+            t.finished = True
+            t.is_error = True
+            t.subtype = typ
+            err = ev.get("error") if typ == "turn.failed" else ev
+            if isinstance(err, dict) and isinstance(err.get("message"), str):
+                t.result = err["message"]
+    return t
+
+
+def parse_codex_text(text: str, names: dict[str, str] | None = None) -> Transcript:
+    events, bad = [], 0
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            events.append(json.loads(line))
+        except ValueError:
+            bad += 1
+    t = parse_codex_events(events, names)
+    t.bad_lines += bad
+    return t

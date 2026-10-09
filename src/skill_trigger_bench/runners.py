@@ -6,13 +6,15 @@ register it in RUNNERS.
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .stream import Transcript, parse_text
+from .skills import load_skill
+from .stream import Transcript, parse_codex_text, parse_text
 
 
 class RunnerError(RuntimeError):
@@ -109,6 +111,83 @@ class ClaudeRunner(Runner):
 
 
 @dataclass
+class CodexRunner(Runner):
+    """OpenAI Codex CLI (`codex exec --json`).
+
+    Skills go in <sandbox>/.agents/skills, the repository scope Codex scans from the working
+    directory. HOME is pointed at the sandbox so $HOME/.agents/skills is empty, while
+    CODEX_HOME keeps the real one so auth still works. Admin (/etc/codex/skills) and
+    bundled system skills can't be turned off from here and stay visible.
+
+    Codex emits no "skill used" event, so activation is a heuristic: a shell command that
+    reads <skill>/SKILL.md. See stream.parse_codex_events.
+    """
+
+    binary: str = "codex"
+    name = "codex"
+
+    def available(self) -> bool:
+        return shutil.which(self.binary) is not None
+
+    def command(self, prompt: str, sandbox: Path) -> list[str]:
+        cmd = [
+            self.binary,
+            "exec",
+            "--json",
+            "--sandbox",
+            "read-only",
+            "--skip-git-repo-check",
+            "--ephemeral",
+            "--ignore-user-config",
+            "--cd",
+            str(sandbox),
+            "-c",
+            'web_search="disabled"',
+            "-c",
+            'approval_policy="never"',
+        ]
+        if self.model:
+            cmd += ["--model", self.model]
+        return cmd + self.extra_args + ["--", prompt]
+
+    def env(self, sandbox: Path) -> dict[str, str]:
+        env = dict(os.environ)
+        env.setdefault("CODEX_HOME", str(Path.home() / ".codex"))
+        env["HOME"] = str(sandbox)
+        return env
+
+    def run(self, prompt: str, skill_dirs: list[Path]) -> Transcript:
+        names = {}
+        for d in skill_dirs:
+            try:
+                names[d.name] = load_skill(d / "SKILL.md").name
+            except (OSError, ValueError):
+                names[d.name] = d.name
+        sandbox = self.make_sandbox(skill_dirs, ".agents/skills")
+        try:
+            proc = subprocess.run(
+                self.command(prompt, sandbox),
+                cwd=sandbox,
+                env=self.env(sandbox),
+                capture_output=True,
+                text=True,
+                timeout=self.timeout,
+                stdin=subprocess.DEVNULL,
+            )
+        except subprocess.TimeoutExpired as e:
+            raise RunnerError(f"codex timed out after {self.timeout}s") from e
+        except OSError as e:
+            raise RunnerError(f"could not start {self.binary}: {e}") from e
+        finally:
+            shutil.rmtree(sandbox, ignore_errors=True)
+        t = parse_codex_text(proc.stdout, names)
+        if t.is_error or (proc.returncode != 0 and not t.finished):
+            detail = t.result or proc.stderr.strip()
+            raise RunnerError(f"codex exited {proc.returncode}: {detail[:300]}")
+        return t
+
+
+@dataclass
 class ReplayRunner(Runner):
     """Replays recorded transcripts; used by tests and for offline re-scoring."""
 
@@ -124,4 +203,4 @@ class ReplayRunner(Runner):
         return parse_text(self.transcripts.pop(0))
 
 
-RUNNERS: dict[str, type[Runner]] = {"claude": ClaudeRunner}
+RUNNERS: dict[str, type[Runner]] = {"claude": ClaudeRunner, "codex": CodexRunner}
