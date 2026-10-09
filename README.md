@@ -181,7 +181,7 @@ teaches the agent to run `stb lint` and explain the findings, and to ask before 
 ## Development
 
 ```sh
-python3 -m unittest discover -s tests -t .
+PYTHONPATH=src python3 -m unittest discover -s tests -t .
 uvx ruff check . && uvx ruff format --check .
 ```
 
