@@ -26,6 +26,9 @@ because nothing tells you a skill was skipped:
 live eval that actually runs prompts through the agent and counts how often it reaches
 for your skill.
 
+I ran it over the most-starred public skill packs. Results, including what happens when you
+install the top 3 together: [State of public skills](docs/state-of-skills.md).
+
 ## Install
 
 Python 3.10+, no dependencies (PyYAML is used if it's there). Not on PyPI yet, so from a clone:
