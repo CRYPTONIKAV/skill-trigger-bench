@@ -27,6 +27,9 @@ WHEN_CUES = re.compile(
     r"for any request|asks? (for|to|about)|mentions?)\b",
     re.I,
 )
+# Quoted example phrasing ('Use when the user says "tell me about X"') is the
+# user speaking, not the skill, so it is removed before matching.
+QUOTED_RE = re.compile(r"\"[^\"]*\"|“[^”]*”|(?<!\w)'[^']{3,}'(?!\w)")
 # Anthropic's skill authoring guide asks for third person: the description is
 # injected into the system prompt, so "I can help you..." reads oddly there.
 # Conservative on purpose: "Use when the user ..." is the recommended form and
@@ -122,7 +125,7 @@ def _check_frontmatter(s: Skill) -> list[Finding]:
         )
     if re.search(r"[<>]", d):
         f.append(Finding("description-angle-brackets", "info", s.name, "description contains '<' or '>'", p))
-    if POINT_OF_VIEW_RE.search(d):
+    if POINT_OF_VIEW_RE.search(QUOTED_RE.sub(" ", d)):
         f.append(
             Finding(
                 "description-point-of-view",
