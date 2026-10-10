@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -19,6 +20,14 @@ EXIT_OK, EXIT_FAIL, EXIT_USAGE = 0, 1, 2
 
 def _pct(x):
     return "n/a" if x is None else f"{x * 100:.0f}%"
+
+
+def _github_escape_data(s: str) -> str:
+    return s.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+
+
+def _github_escape_prop(s: str) -> str:
+    return _github_escape_data(s).replace(":", "%3A").replace(",", "%2C")
 
 
 def cmd_lint(args) -> int:
@@ -42,6 +51,19 @@ def cmd_lint(args) -> int:
             "findings": [f.to_dict() for f in findings],
         }
         print(json.dumps(out, indent=2))
+    elif args.format == "github":
+        for f in findings:
+            command = {"error": "error", "warning": "warning"}.get(f.severity, "notice")
+            title = _github_escape_prop(f.rule)
+            msg = _github_escape_data(f.message)
+            if f.path:
+                try:
+                    rel = os.path.relpath(f.path)
+                except ValueError:  # Windows: path on another drive than the cwd
+                    rel = str(f.path)
+                print(f"::{command} file={_github_escape_prop(rel)},title={title}::{msg}")
+            else:
+                print(f"::{command} title={title}::{msg}")
     else:
         sources = {}
         for s in skills:
@@ -140,7 +162,7 @@ def build_parser() -> argparse.ArgumentParser:
         nargs="*",
         help="skill folders or dirs of skills (default: ~/.claude/skills, .claude/skills, installed plugins)",
     )
-    lp.add_argument("--format", choices=["text", "json"], default="text")
+    lp.add_argument("--format", choices=["text", "json", "github"], default="text")
     lp.add_argument(
         "--budget", type=int, default=DEFAULT_BUDGET, help="description budget in chars (default %(default)s)"
     )
