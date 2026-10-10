@@ -184,7 +184,8 @@ another agent is a subclass with a `run()` method.
 ## CI
 
 `stb lint` exits 1 on errors (or on warnings with `--strict`), and `--format json` gives
-you something to parse. See [.github/workflows/skills.yml](.github/workflows/skills.yml):
+you something to parse. `--format github` prints one workflow command per finding
+(`::error`, `::warning`, `::notice` for info) for inline PR annotations. See [.github/workflows/skills.yml](.github/workflows/skills.yml):
 lint runs on every PR that touches skills; eval is manual (`workflow_dispatch`) because it
 needs an API key and costs money.
 
