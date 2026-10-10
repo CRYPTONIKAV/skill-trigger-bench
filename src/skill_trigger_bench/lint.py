@@ -27,6 +27,16 @@ WHEN_CUES = re.compile(
     r"for any request|asks? (for|to|about)|mentions?)\b",
     re.I,
 )
+# Anthropic's skill authoring guide asks for third person: the description is
+# injected into the system prompt, so "I can help you..." reads oddly there.
+# Conservative on purpose: "Use when the user ..." is the recommended form and
+# must not fire, so a bare "you"/"your" in a when-clause (e.g. "Use when you
+# upload a PDF") is left alone; only clear assistant-voiced phrases fire.
+POINT_OF_VIEW_RE = re.compile(
+    r"(^\s*I(\s|'ll|'m|'ve|'d)\b|\bI\s+(can|will|help|assist|am)\b|\bI'(ll|m|ve|d)\b|"
+    r"\byou\s+can\b|\b(use|ask|tell|let)\s+me\b|\bhelp\s+you\b)",
+    re.I,
+)
 
 SEVERITY_ORDER = {"error": 0, "warning": 1, "info": 2}
 
@@ -112,6 +122,17 @@ def _check_frontmatter(s: Skill) -> list[Finding]:
         )
     if re.search(r"[<>]", d):
         f.append(Finding("description-angle-brackets", "info", s.name, "description contains '<' or '>'", p))
+    if POINT_OF_VIEW_RE.search(d):
+        f.append(
+            Finding(
+                "description-point-of-view",
+                "warning",
+                s.name,
+                "description is written in first or second person; "
+                "use third person (e.g. 'Processes PDFs. Use when ...')",
+                p,
+            )
+        )
     comp = s.meta.get("compatibility")
     if isinstance(comp, str) and len(comp) > COMPATIBILITY_MAX:
         f.append(
