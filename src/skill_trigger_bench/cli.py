@@ -57,7 +57,10 @@ def cmd_lint(args) -> int:
             title = _github_escape_prop(f.rule)
             msg = _github_escape_data(f.message)
             if f.path:
-                rel = os.path.relpath(f.path)
+                try:
+                    rel = os.path.relpath(f.path)
+                except ValueError:  # Windows: path on another drive than the cwd
+                    rel = str(f.path)
                 print(f"::{command} file={_github_escape_prop(rel)},title={title}::{msg}")
             else:
                 print(f"::{command} title={title}::{msg}")

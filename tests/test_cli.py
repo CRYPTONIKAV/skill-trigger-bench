@@ -82,6 +82,14 @@ class CliTests(SkillDirCase):
         self.assertEqual(code, 0)
         self.assertEqual(out.strip(), "")
 
+    def test_github_format_escapes_workflow_command_syntax(self):
+        from skill_trigger_bench.cli import _github_escape_data, _github_escape_prop
+
+        # a newline or % in a message would otherwise end or corrupt the annotation
+        self.assertEqual(_github_escape_data("50% done\nnext"), "50%25 done%0Anext")
+        # : and , separate properties, so they must be escaped inside file= and title=
+        self.assertEqual(_github_escape_prop("a:b,c"), "a%3Ab%2Cc")
+
     def test_no_skills_in_explicit_path(self):
         self.assertEqual(run(["lint", str(self.root / "empty")])[0], 2)
 
