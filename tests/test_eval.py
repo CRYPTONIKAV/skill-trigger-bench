@@ -81,6 +81,13 @@ class EvalTests(SkillDirCase):
         self.assertTrue(any("goal" in p.lower() for p in ps.should_trigger))  # goal instead of a task
         self.assertTrue(any("past" in p.lower() for p in ps.should_trigger))  # pasted file/output + short ask
 
+    def test_file_prompts_only_for_file_skills(self):
+        bread = find_skills(
+            self.make_skill("bread", "bread", "Bake sourdough bread. Use when the user asks about baking.")
+        )[0]
+        ps = generate(bread, [], n=10)
+        self.assertNotIn(".csv", "\n".join(ps.should_trigger))
+
     def test_generic_negatives_have_near_misses(self):
         self.assertGreaterEqual(len(GENERIC_NEGATIVES), 10)
         joined = "\n".join(GENERIC_NEGATIVES)

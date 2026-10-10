@@ -83,6 +83,11 @@ def _phrases(desc: str) -> list[str]:
     return uniq
 
 
+FILE_HINT_RE = re.compile(
+    r"\b(files?|csv|tsv|pdfs?|docx?|xlsx?|json|yaml|spreadsheets?|documents?|logs?|datasets?)\b", re.I
+)
+
+
 def _clean(phrase: str) -> str:
     """Strip reported-speech prefixes so templates read like a typed request."""
     return re.sub(
@@ -102,12 +107,17 @@ def generate(skill: Skill, others: list[Skill], n: int = 5) -> PromptSet:
         "I need to {p_lower}. Where do I start?",
         "Please {p_lower} for this project.",
         "Quick one: {p_lower}?",
-        "Here's data.csv — {p_lower}?",
-        "My goal: {p_lower}. The file is data.csv — can you handle it?",
         "{name} pls",
-        "Pasted from data.csv below — {p_lower}. What does it mean?",
-        "Can you look at report.csv and {p_lower}?",
     ]
+    # File-shaped requests only make sense for skills that work on files;
+    # "Here's data.csv, bake sourdough bread?" would be a nonsense positive.
+    if FILE_HINT_RE.search(skill.description):
+        templates += [
+            "Here's data.csv: {p_lower}?",
+            "My goal: {p_lower}. The file is data.csv, can you handle it?",
+            "Pasted from data.csv below. {p}. What does it mean?",
+            "Can you look at report.csv and {p_lower}?",
+        ]
     phrases = [c for p in _phrases(skill.description) if (c := _clean(p))]
     if not phrases:
         kw = " ".join(tokens(skill.description)[:6]) or name
