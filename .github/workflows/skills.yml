@@ -20,7 +20,7 @@ jobs:
           python-version: "3.12"
       - run: pip install .  # in your own repo: pip install skill-trigger-bench
       - name: Lint skills
-        run: stb lint skills examples/skills --format github
+        run: stb lint skills examples/skills
 
   eval:
     if: github.event_name == 'workflow_dispatch' && inputs.skill != ''
