@@ -60,6 +60,7 @@ What it checks:
 |---|---|
 | `frontmatter`, `name-*`, `description-missing`, `description-length` | the [Agent Skills spec](https://agentskills.io/specification): name ≤ 64 chars, lowercase-hyphen, matches its folder; description present and ≤ 1024 chars |
 | `description-no-when` | the description says what the skill does but never when to use it |
+| `description-point-of-view` | the description is written in first or second person instead of third |
 | `description-budget` | all descriptions together are over (or near) the ~15k char budget (`--budget` to change) |
 | `trigger-overlap` | two descriptions are similar enough (TF-IDF cosine ≥ 0.35, `--overlap`) that they'll fight over prompts; the shared terms are listed |
 | `duplicate-name` | the same skill name installed twice, e.g. from two plugins |
@@ -184,7 +185,8 @@ another agent is a subclass with a `run()` method.
 ## CI
 
 `stb lint` exits 1 on errors (or on warnings with `--strict`), and `--format json` gives
-you something to parse. See [.github/workflows/skills.yml](.github/workflows/skills.yml):
+you something to parse. `--format github` prints one workflow command per finding
+(`::error`, `::warning`, `::notice` for info) for inline PR annotations. See [.github/workflows/skills.yml](.github/workflows/skills.yml):
 lint runs on every PR that touches skills; eval is manual (`workflow_dispatch`) because it
 needs an API key and costs money.
 

@@ -131,6 +131,32 @@ class LintTests(SkillDirCase):
         self.make_skill("x", "x", "EU AI Act readiness check. Use during AI-system intake or before EU deployment.")
         self.assertNotIn("description-no-when", rules(self.run_lint()[0]))
 
+    def test_description_point_of_view_first_person(self):
+        self.make_skill("x", "x", "I can help you process PDFs")
+        f = [x for x in self.run_lint()[0] if x.rule == "description-point-of-view"]
+        self.assertEqual(f[0].severity, "warning")
+
+    def test_description_point_of_view_second_person(self):
+        self.make_skill("x", "x", "You can use this to process PDFs")
+        f = [x for x in self.run_lint()[0] if x.rule == "description-point-of-view"]
+        self.assertEqual(f[0].severity, "warning")
+
+    def test_description_point_of_view_third_person_is_fine(self):
+        self.make_skill("x", "x", "Processes PDFs. Use when the user mentions PDFs.")
+        self.assertNotIn("description-point-of-view", rules(self.run_lint()[0]))
+
+    def test_description_point_of_view_ignores_quoted_user_phrases(self):
+        self.make_skill("x", "x", 'Summarises papers. Use when the user says "tell me about this paper".')
+        self.assertNotIn("description-point-of-view", rules(self.run_lint()[0]))
+
+    def test_description_point_of_view_apostrophes_are_not_quotes(self):
+        self.make_skill("x", "x", "I'll help you clean CSVs, it's quick")
+        self.assertIn("description-point-of-view", rules(self.run_lint()[0]))
+
+    def test_description_point_of_view_use_when_you_is_fine(self):
+        self.make_skill("x", "x", "Converts PDFs into Markdown. Use when you upload a scanned document.")
+        self.assertNotIn("description-point-of-view", rules(self.run_lint()[0]))
+
     def test_duplicate_identical_copies_named(self):
         self.make_skill("one/pdf", "pdf", GOOD)
         self.make_skill("two/pdf", "pdf", GOOD)
